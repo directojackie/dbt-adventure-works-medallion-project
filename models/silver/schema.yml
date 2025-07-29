@@ -1,0 +1,590 @@
+
+version: 2
+
+models:
+  # For addresses model
+  - name: silver_addresses
+    description: "Cleaned and structured address data with WA timezone update timestamp."
+    columns:
+      - name: ADDRESS_ID
+        description: "Unique identifier for the address."
+        tests:
+          - not_null
+          - unique
+
+      - name: STREET
+        description: "Concatenated street address from line 1 and line 2."
+
+      - name: CITY
+        description: "City of the address."
+        tests:
+          - not_null
+
+      - name: STATE
+        description: "State or province of the address."
+
+      - name: COUNTRY
+        description: "Country of the address."
+        tests:
+          - not_null
+
+      - name: ZIPCODE
+        description: "Postal code of the address."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_match_regex:
+              regex: '^\\d{4,6}$'
+
+      - name: MODIFIED_DATE
+        description: "Date when the record was last modified."
+        tests:
+          - not_null
+
+      - name: UPDATE_DATE
+        description: "Timestamp when the record was processed in WA timezone."
+
+  # For customers model
+  - name: silver_customers
+    description: "Customer dimension table with references to person, store, and territory information. Includes WA timezone update timestamp."
+    columns:
+      - name: CUSTOMER_ID
+        description: "Unique identifier for the customer."
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              to: ref('silver_salesorders')
+              field: CUSTOMER_ID
+
+      - name: PERSON_ID
+        description: "Identifier for the person associated with the customer."
+        tests:
+          - relationships:
+              to: ref('silver_persons')
+              field: PERSON_ID
+
+      - name: STORE_ID
+        description: "Identifier for the store associated with the customer."
+        tests:
+          - relationships:
+              to: ref('silver_stores')
+              field: STORE_ID
+
+      - name: TERRITORY
+        description: "Sales territory assigned to the customer."
+
+      - name: ACCOUNT_NUMBER
+        description: "Account number assigned to the customer."
+        tests:
+          - not_null
+          - unique
+
+      - name: MODIFIED_DATE
+        description: "Date when the record was last modified."
+        tests:
+          - not_null
+
+      - name: UPDATE_DATE
+        description: "Timestamp when the record was processed in WA timezone."
+
+   # For persons model
+  - name: silver_persons
+    description: "Person dimension table with full name formatting and purchase history."
+    columns:
+      - name: PERSON_ID
+        description: "Unique identifier for the person."
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              to: ref('silver_customers')
+              field: PERSON_ID
+
+      - name: FULL_NAME
+        description: "Formatted full name based on name style."
+
+      - name: TITLE
+        description: "Title of the person (e.g., Mr., Ms., Dr.)."
+
+      - name: FIRST_NAME
+        description: "First name of the person."
+        tests:
+          - not_null
+
+      - name: LAST_NAME
+        description: "Last name of the person."
+        tests:
+          - not_null
+
+      - name: PERSON_TYPE
+        description: "Type of person (e.g., Employee, Customer)."
+
+      - name: EMAIL_PROMOTION
+        description: "Indicates if the person is subscribed to email promotions."
+
+      - name: TOTAL_PURCHASE_YTD
+        description: "Total purchases made by the person year-to-date."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: MODIFIED_DATE
+        description: "Date when the record was last modified."
+        tests:
+          - not_null
+
+      - name: UPDATE_DATE
+        description: "Timestamp when the record was processed."
+
+   # For productcategories model
+  - name: silver_productcategories
+    description: "Product category dimension table."
+    columns:
+      - name: PRODUCT_CATEGORY_ID
+        description: "Unique identifier for the product category."
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              to: ref('silver_products')
+              field: PRODUCT_CATEGORY_ID
+
+      - name: PRODUCT_CATEGORY_NAME
+        description: "Name of the product category."
+        tests:
+          - not_null
+
+      - name: MODIFIED_DATE
+        description: "Date when the record was last modified."
+        tests:
+          - not_null
+
+      - name: UPDATE_DATE
+        description: "Timestamp when the record was processed."
+
+   # For productdescriptions model
+  - name: silver_productdescriptions
+    description: "Product description dimension table with culture-specific details and WA timezone update timestamp."
+    columns:
+      - name: PRODUCT_DESCRIPTION_ID
+        description: "Unique identifier for the product description."
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              to: ref('silver_products')
+              field: PRODUCT_DESCRIPTION_ID
+
+      - name: PRODUCT_DESCRIPTION
+        description: "Textual description of the product."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_not_be_null()
+
+      - name: CULTURE_CODE
+        description: "Culture code for localization (e.g., en-US, fr-FR)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["en-US", "fr-FR", "es-ES", "de-DE", "zh-CN"]
+
+      - name: MODIFIED_DATE
+        description: "Date when the record was last modified."
+        tests:
+          - not_null
+
+      - name: UPDATE_DATE
+        description: "Timestamp when the record was processed in WA timezone."
+
+  # For productsmodels model
+  - name: silver_productmodels
+    description: "Product model dimension table with catalog and instructions."
+    columns:
+      - name: PRODUCT_MODEL_ID
+        description: "Unique identifier for the product model."
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              to: ref('silver_products')
+              field: PRODUCT_MODEL_ID
+
+      - name: PRODUCT_MODEL_NAME
+        description: "Name of the product model."
+        tests:
+          - not_null
+
+      - name: PRODUCT_MODEL_CATALOG_DESCRIPTION
+        description: "Catalog description of the product model."
+
+      - name: PRODUCT_MODEL_INSTRUCTIONS
+        description: "Instructions related to the product model."
+
+      - name: MODIFIED_DATE
+        description: "Date when the record was last modified."
+        tests:
+          - not_null
+
+      - name: UPDATE_DATE
+        description: "Timestamp when the record was processed."
+
+  # For productdescriptions model
+  - name: silver_products
+    description: "Product dimension table with attributes, pricing, and lifecycle dates. Includes WA timezone update timestamp."
+    columns:
+      - name: PRODUCT_ID
+        description: "Unique identifier for the product."
+        tests:
+          - not_null
+          - unique
+
+      - name: PRODUCT_NAME
+        description: "Name of the product."
+        tests:
+          - not_null
+
+      - name: PRODUCT_NUMBER
+        description: "Internal product number used for tracking."
+        tests:
+          - not_null
+          - unique
+
+      - name: IS_MANUFACTURED
+        description: "Indicates if the product is manufactured in-house."
+        tests:
+          - accepted_values:
+              values: [0, 1]
+
+      - name: IS_SALEABLE
+        description: "Indicates if the product is available for sale."
+        tests:
+          - accepted_values:
+              values: [0, 1]
+
+      - name: PRODUCT_COLOR
+        description: "Color of the product."
+
+      - name: SAFETY_STOCK_LEVEL
+        description: "Minimum stock level before reordering."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: REORDER_POINT
+        description: "Stock level at which reordering is triggered."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: STANDARD_COST
+        description: "Standard cost of the product."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: LIST_PRICE
+        description: "List price of the product."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: PRODUCT_SIZE
+        description: "Size of the product."
+
+      - name: PRODUCT_SIZE_UNIT
+        description: "Unit of measurement for product size."
+
+      - name: PRODUCT_WEIGHT_UNIT
+        description: "Unit of measurement for product weight."
+
+      - name: PRODUCT_WEIGHT
+        description: "Weight of the product."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: DAYS_TO_MANUFACTURE
+        description: "Number of days required to manufacture the product."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: PRODUCT_LINE
+        description: "Product line classification."
+
+      - name: PRODUCT_CLASS
+        description: "Product class (e.g., High, Medium, Low)."
+        tests:
+          - accepted_values:
+              values: ["H", "M", "L"]
+
+      - name: PRODUCT_STYLE
+        description: "Product style (e.g., W for Women's, M for Men's)."
+        tests:
+          - accepted_values:
+              values: ["W", "M", "U"]
+
+      - name: PRODUCT_SUBCATEGORY
+        description: "Subcategory of the product."
+
+      - name: PRODUCT_CATEGORY
+        description: "Category of the product."
+        tests:
+          - relationships:
+              to: ref('silver_productcategories')
+              field: PRODUCT_CATEGORY
+
+      - name: PRODUCT_MODEL
+        description: "Model of the product."
+        tests:
+          - relationships:
+              to: ref('silver_productmodels')
+              field: PRODUCT_MODEL
+
+      - name: SELL_START_DATE
+        description: "Date when the product became available for sale."
+
+      - name: SELL_END_DATE
+        description: "Date when the product stopped being sold."
+
+      - name: DISCONTINUED_DATE
+        description: "Date when the product was discontinued."
+
+      - name: MODIFIED_DATE
+        description: "Date when the record was last modified."
+        tests:
+          - not_null
+
+      - name: UPDATE_DATE
+        description: "Timestamp when the record was processed in WA timezone."
+
+  # For salesorderdetails model
+  - name: silver_salesorderdetails
+    description: "Sales order line items with product and pricing details, incrementally loaded and timestamped in WA timezone."
+    columns:
+      - name: SALES_ORDER_DETAIL_ID
+        description: "Unique identifier for the sales order detail line."
+        tests:
+          - not_null
+          - unique
+
+      - name: SALES_ORDER_ID
+        description: "Identifier for the parent sales order."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_salesorders')
+              field: SALES_ORDER_ID
+
+      - name: PRODUCT_ID
+        description: "Identifier for the product being ordered."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_products')
+              field: PRODUCT_ID
+
+      - name: PRODUCT_NAME
+        description: "Name of the product."
+
+      - name: ORDER_QUANTITY
+        description: "Quantity of the product ordered."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1
+
+      - name: UNIT_PRICE
+        description: "Unit price of the product."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: UNIT_PRICE_DISCOUNT
+        description: "Discount applied to the unit price."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1
+
+      - name: LINE_TOTAL
+        description: "Total amount for the line item after discount."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: SPECIAL_OFFER_ID
+        description: "Identifier for any special offer applied."
+        tests:
+          - relationships:
+              to: ref('silver_specialoffers')
+              field: SPECIAL_OFFER_ID
+
+      - name: CARRIER_TRACKING_NUMBER
+        description: "Tracking number for the shipment."
+
+      - name: MODIFIED_DATE
+        description: "Date when the record was last modified."
+        tests:
+          - not_null
+
+      - name: UPDATE_DATE
+        description: "Timestamp when the record was processed in WA timezone."
+
+  # For salesorders model
+  - name: silver_salesorders
+    description: "Cleaned and enriched sales orders data from bronze layer with WA timezone conversion."
+    columns:
+      - name: SALES_ORDER_ID
+        description: "Unique identifier for the sales order."
+        tests:
+          - not_null
+          - unique
+
+      - name: ORDER_DATE
+        description: "Date when the order was placed."
+        tests:
+          - not_null
+          - freshness:
+              field: ORDER_DATE
+              warn_after: { count: 3, period: day }
+              error_after: { count: 7, period: day }
+
+      - name: STATUS
+        description: "Status code of the order."
+        tests:
+          - accepted_values:
+              values: [1, 2, 3, 4, 5]
+
+      - name: CUSTOMER_ID
+        description: "Identifier for the customer who placed the order."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_customers')
+              field: CUSTOMER_ID
+
+      - name: SALES_PERSON_ID
+        description: "Identifier for the salesperson handling the order."
+        tests:
+          - relationships:
+              to: ref('silver_salespersons')
+              field: SALES_PERSON_ID
+
+      - name: SUB_TOTAL
+        description: "Subtotal amount of the order."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: TOTAL_DUE
+        description: "Total amount due for the order."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: MODIFIED_DATE
+        description: "Date when the record was last modified."
+        tests:
+          - not_null
+
+      - name: UPDATE_DATE
+        description: "Timestamp when the record was processed in WA timezone."
+
+  # For stores model
+  - name: silver_stores
+    description: "Cleaned and structured store data from the bronze layer, including business attributes and WA timestamp."
+    columns:
+      - name: STORE_ID
+        description: "Unique identifier for the store."
+        tests:
+          - not_null
+          - unique
+
+      - name: STORE_NAME
+        description: "Name of the store."
+        tests:
+          - not_null
+
+      - name: SALES_PERSON_ID
+        description: "Salesperson assigned to the store."
+        tests:
+          - relationships:
+              to: ref('silver_salespersons')
+              field: SALES_PERSON_ID
+
+      - name: ANNUAL_SALES
+        description: "Annual sales amount."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              strictly: true
+
+      - name: ANNUAL_REVENUE
+        description: "Annual revenue amount."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              strictly: true
+
+      - name: BANK_NAME
+        description: "Bank associated with the store."
+
+      - name: BUSINESS_TYPE
+        description: "Type of business the store operates."
+
+      - name: YEAR_OPENED
+        description: "Year the store was opened."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1900
+              max_value: 2100
+
+      - name: SPECIALTY
+        description: "Specialty code of the store."
+
+      - name: SQUARE_FEET
+        description: "Size of the store in square feet."
+
+      - name: BRANDS
+        description: "Number of brands carried by the store."
+
+      - name: INTERNET
+        description: "Indicates if the store has internet access (1 = Yes, 0 = No)."
+        tests:
+          - accepted_values:
+              values: [0, 1]
+
+      - name: NUMBER_EMPLOYEES
+        description: "Number of employees working in the store."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: MODIFIED_DATE
+        description: "Date when the record was last modified."
+        tests:
+          - not_null
+
+      - name: UPDATE_DATE
+        description: "Timestamp when the record was processed."
+
+        
+  # Gold Layer DBT Test
+  # DBT Test for fact_sales_order table
+  - name: fact_sales_order
+    description: "Fact table for sales orders and details"
+    columns:
+      - name: SALES_ORDER_DETAIL_ID
+        tests:
+          - not_null
+          - unique
+      - name: SALES_ORDER_ID
+        tests:
+          - not_null
+      - name: UPDATE_DATE
+        tests:
+          - not_null
+
+
