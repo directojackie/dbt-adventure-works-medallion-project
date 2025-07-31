@@ -1,5 +1,5 @@
 /* Transformation from Silver Layer to Gold Layer for products, productcategories, productmodels and product description model -> dim_products */
-{{ config(materialized='table') }}
+
 
 WITH products AS (
     SELECT PRODUCT_ID,

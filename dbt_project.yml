@@ -58,6 +58,9 @@ models:
         fact_sales_order:
           materialized: incremental
           unique_key: SALES_ORDER_ID
+        fact_sales_order_per_product:
+          materialized: incremental
+          unique_key: SALES_ORDER_ID
       full_load:
         materialized: table
         tags: "table"

@@ -1,0 +1,135 @@
+version: 2
+
+models:
+  - name: dim_stores
+    description: >
+      Gold layer dimensional model combining customer and store data from silver layer.
+    columns:
+      - name: CUSTOMER_ID
+        description: Unique identifier for the customer.
+        tests:
+          - not_null
+          - unique
+
+      - name: PERSON_ID
+        description: Identifier for the person associated with the customer.
+        tests:
+          - not_null
+
+      - name: STORE_ID
+        description: Store identifier linked to both customer and store data.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_stores')
+              field: STORE_ID
+
+      - name: TERRITORY
+        description: Customer territory.
+        tests:
+          - accepted_values:
+              values: ['North', 'South', 'East', 'West']
+              config:
+                severity: warn
+
+      - name: ACCOUNT_NUMBER
+        description: Customer account number.
+        tests:
+          - not_null
+          - unique
+
+      - name: CUSTOMER_MODIFIED_DATE
+        description: Last modified date for customer data.
+        tests:
+          - not_null
+
+      - name: CUSTOMER_UPDATE_DATE
+        description: WA timezone update timestamp for customer.
+        tests:
+          - not_null
+
+      - name: STORE_NAME
+        description: Name of the store.
+        tests:
+          - not_null
+      - name: SALES_PERSON_ID
+        description: Salesperson assigned to the store.
+        tests:
+          - not_null
+
+      - name: ANNUAL_SALES
+        description: Annual sales figures.
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: ANNUAL_REVENUE
+        description: Annual revenue figures.
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: BANK_NAME
+        description: Bank associated with the store.
+        tests:
+          - not_null
+
+      - name: BUSINESS_TYPE
+        description: Type of business.
+        tests:
+          - accepted_values:
+              values: ['Retail', 'Wholesale', 'Online']
+              config:
+                severity: warn
+
+      - name: YEAR_OPENED
+        description: Year the store was opened.
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1900
+              max_value: 2100
+
+      - name: SPECIALTY
+        description: Store specialty.
+        tests:
+          - not_null
+
+      - name: SQUARE_FEET
+        description: Store size in square feet.
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 100
+
+      - name: BRANDS
+        description: Brands available in the store.
+        tests:
+          - not_null
+
+      - name: INTERNET
+        description: Internet availability.
+        tests:
+          - accepted_values:
+              values: ['Yes', 'No']
+
+      - name: NUMBER_EMPLOYEES
+        description: Number of employees in the store.
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1
+
+      - name: STORE_MODIFIED_DATE
+        description: Last modified date for store data.
+        tests:
+          - not_null
+
+      - name: STORE_UPDATE_DATE
+        description: WA timezone update timestamp for store.
+        tests:
+          - not_null
+
+      - name: UPDATE_DATE
+        description: Final update timestamp for the record.
+        tests:
+          - not_null
