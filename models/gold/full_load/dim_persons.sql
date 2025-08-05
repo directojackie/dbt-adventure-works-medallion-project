@@ -1,6 +1,5 @@
-{{ config(
-    materialized='table'
-) }}
+/* Transformation from Silver Layer to Gold Layer for customers model -> dim_customers */
+{{ config(materialized='table') }}
 
 SELECT 
     PERSON_ID,
